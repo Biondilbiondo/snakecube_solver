@@ -7,14 +7,24 @@ class SnakeCube{
     private:
        //0 = stright
        //1 = angled
-       int snake[64] = {0,0,1,1,0,1,1,1,0,0,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,1,1,1,1,1,0,1,0,0,1,1,1,1,0,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,0,1,0}; 
-       //Relative position considering that the last cube is placed in the origin and oriented along
-       //z (k) axis.
-       // [ i, j, k ]
+       int snake[64] = {0,0,1,1,0,1,1,1,0,0,1,1,0,1,1,0,
+                        1,1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,
+                        1,1,1,1,1,0,1,0,0,1,1,1,1,0,0,1,
+                        1,0,1,1,1,1,1,1,1,1,1,1,0,0,1,0};
+
+       //Relative direction considering that the last cube is placed in the 
+       //origin and oriented along z (k) axis. Each direction is
+       //expressed as a linear combination of versor [ i, j, k ].
        int direction[64][3];
-       //Absolute direction, first cube is considered to be oriented along z axis.
+
+       //Absolute direction, first cube is considered to be oriented 
+       //along z axis.
        int absolute_direction[64][3];
+
+       //Absolute position, first cube is considered to be in the origin.
        int absolute_position[64][3];
+
+       //Just statistic for method solve(). Remove ASAP.
        int max_fold = 0;
        float explored_leafs = 0.0;
 
@@ -98,7 +108,8 @@ class SnakeCube{
                    
                    for( int a = 0; a < 3; a++ )
                        for( int b = 0; b < 3; b++ )
-                           current_direction[a] += rot_matrix[a][b] * direction[i][b]; 
+                           current_direction[a] += \
+                                            rot_matrix[a][b] * direction[i][b]; 
 
                 }
 
@@ -115,7 +126,8 @@ class SnakeCube{
             
             for( int i = 1; i < 64; i++ )
                 for( int a = 0; a < 3; a++ )
-                    absolute_position[i][a] = absolute_position[i-1][a] + absolute_direction[i-1][a];
+                    absolute_position[i][a] = \
+                        absolute_position[i-1][a] + absolute_direction[i-1][a];
             
         }
 
@@ -136,7 +148,9 @@ class SnakeCube{
         bool no_intersection( int topt = 64 ){
             for( int j = 0; j < topt; j++ )
                 for( int i = j + 1; i < topt; i++ )
-                    if( absolute_position[i][0] == absolute_position[j][0] && absolute_position[i][1] == absolute_position[j][1]  && absolute_position[i][2] == absolute_position[j][2] )
+                    if( absolute_position[i][0] == absolute_position[j][0] && \
+                        absolute_position[i][1] == absolute_position[j][1] && \
+                        absolute_position[i][2] == absolute_position[j][2] )
                         return 0;
             return 1;
         }
@@ -180,9 +194,9 @@ class SnakeCube{
                     cout << std::setw(10) << i << "\t";
                 cout << "\n";
                 for( int i = j*8; i < (j+1)*8; i++ ){
-                    cout << '(' << std::setw( 2 ) << absolute_position[i][0]; 
-                    cout << ';' << std::setw( 2 ) << absolute_position[i][1]; 
-                    cout << ';' << std::setw( 2 ) << absolute_position[i][2] << ')'; 
+                    cout << '(' << std::setw(2) << absolute_position[i][0]; 
+                    cout << ';' << std::setw(2) << absolute_position[i][1]; 
+                    cout << ';' << std::setw(2) << absolute_position[i][2] << ')'; 
                     cout << "\t";
                 }
                 cout << "\n\n";
@@ -231,7 +245,9 @@ class SnakeCube{
         }
 
         bool solve( int start = 0 ){
-            if( get_projection( 0, start ) > 4 || get_projection( 1, start ) > 4 || get_projection( 2, start ) > 4 ){
+            if( get_projection( 0, start ) > 4 || \
+                get_projection( 1, start ) > 4 || \
+                get_projection( 2, start ) > 4 ){
                 int cnt = 0;
                 for( int j = start + 1; j < 64; j++ )
                     cnt += get_element_type( j );
@@ -259,7 +275,9 @@ class SnakeCube{
                 cout << "New maximum depth reached in folding: " << max_fold << '\n';
                 cout << "Explored leafs " << 100.00 * explored_leafs/1.24e27 << "\n\n";
                 
-                if( get_projection( 0 ) > 4 || get_projection( 1 ) > 4 || get_projection( 2 ) > 4 ){
+                if( get_projection( 0 ) > 4 || \
+                    get_projection( 1 ) > 4 || \
+                    get_projection( 2 ) > 4 ){
                     int cnt = 0;
                     for( int j = start + 1; j < 64; j++ )
                         cnt += get_element_type( j );
