@@ -1,6 +1,7 @@
 #include <iomanip>
 #include <iostream>
 #include <math.h>
+#include <omp.h>
 using std::cout;
 
 class SnakeCube{
@@ -27,6 +28,13 @@ class SnakeCube{
        //Just statistic for method solve(). Remove ASAP.
        int max_fold = 0;
        float explored_leafs = 0.0;
+
+       //Just for testing performances
+       double elapsed_rp = 0.0;
+       double elapsed_rd = 0.0;
+       double elapsed_gp = 0.0;
+       double elapsed_gi = 0.0;
+
 
     public:
         SnakeCube( void ){
@@ -62,10 +70,13 @@ class SnakeCube{
         }
 
         void refresh_absolute_direction( void ){
+            #pragma omp parallel num_threads(2)
+            double startTime = omp_get_wtime();
             int current_direction[3] = { 0, 0, 1 };
             for( int i = 0; i < 64; i++ ){
                 if( get_element_type( i ) == 1 ){
                    int rot_matrix[3][3];
+                   #pragma omp for
                    for( int j = 0; j < 3; j++ )
                        for( int k = 0; k < 3; k++ )
                             rot_matrix[j][k] = 0;
@@ -105,7 +116,7 @@ class SnakeCube{
                    current_direction[ 0 ] = 0;
                    current_direction[ 1 ] = 0;
                    current_direction[ 2 ] = 0;
-                   
+                   #pragma omp for
                    for( int a = 0; a < 3; a++ )
                        for( int b = 0; b < 3; b++ )
                            current_direction[a] += \
@@ -117,9 +128,12 @@ class SnakeCube{
                 absolute_direction[i][1] = current_direction[1]; 
                 absolute_direction[i][2] = current_direction[2]; 
             }
+        elapsed_rd +=  omp_get_wtime() - startTime ;
+
         }
 
         void refresh_absolute_position( void ){
+            double startTime = omp_get_wtime();
             absolute_position[0][0] = 0;
             absolute_position[0][1] = 0;
             absolute_position[0][2] = 0;
@@ -129,9 +143,11 @@ class SnakeCube{
                     absolute_position[i][a] = \
                         absolute_position[i-1][a] + absolute_direction[i-1][a];
             
+            elapsed_rp += omp_get_wtime() - startTime ;
         }
 
         int get_projection( int a, int topt = 64 ){
+            double startTime = omp_get_wtime();
             int proj = 0;
             int min = 0;
             int max = 0;
@@ -142,16 +158,21 @@ class SnakeCube{
                         max = absolute_position[i][a];
                 }
                 proj = max - min + 1;
+            
+            elapsed_gp +=  omp_get_wtime() - startTime;
+
             return proj;
         }
         
         bool no_intersection( int topt = 64 ){
+            double startTime = omp_get_wtime();
             for( int j = 0; j < topt; j++ )
                 for( int i = j + 1; i < topt; i++ )
                     if( absolute_position[i][0] == absolute_position[j][0] && \
                         absolute_position[i][1] == absolute_position[j][1] && \
                         absolute_position[i][2] == absolute_position[j][2] )
                         return 0;
+            elapsed_gi +=  omp_get_wtime() - startTime;
             return 1;
         }
 
@@ -252,7 +273,6 @@ class SnakeCube{
                 for( int j = start + 1; j < 64; j++ )
                     cnt += get_element_type( j );
                 explored_leafs += pow( 4.0, cnt );
-
                 return 1;
             }
             if( no_intersection(start) == 0 ){
@@ -260,7 +280,6 @@ class SnakeCube{
                 for( int j = start + 1; j < 64; j++ )
                     cnt += get_element_type( j );
                 explored_leafs += pow( 4.0, cnt );
-
                 return 1;
             }
             
@@ -306,7 +325,13 @@ class SnakeCube{
                 if( solve( next_el ) == 0 )
                     return 0;
             }
-
+            if( start == 17 ){
+                cout << "Elapsed in rp: " << elapsed_rp << '\n';
+                cout << "Elapsed in rd: " << elapsed_rd << '\n';
+                cout << "Elapsed in gp: " << elapsed_gp << '\n';
+                cout << "Elapsed in gi: " << elapsed_gi << '\n';
+                exit(0);
+            }
             return 1;
         }
 };
