@@ -2,7 +2,15 @@
 #include <iostream>
 #include <math.h>
 #include <omp.h>
+#define  I 0
+#define _I 1
+#define  J 2
+#define _J 3
+#define  K 4
+#define _K 5
+
 using std::cout;
+
 
 class SnakeCube{
     private:
@@ -15,15 +23,18 @@ class SnakeCube{
 
        //Relative direction considering that the last cube is placed in the 
        //origin and oriented along z (k) axis. Each direction is
-       //expressed as a linear combination of versor [ i, j, k ].
-       int direction[64][3];
+       //expressed as a versor oriented along or against the cartesian axis.
+       int direction[64];
 
        //Absolute direction, first cube is considered to be oriented 
        //along z axis.
-       int absolute_direction[64][3];
+       int absolute_direction[64];
 
        //Absolute position, first cube is considered to be in the origin.
        int absolute_position[64][3];
+
+       //Table that contains all possible results of a rotation of a versor
+       int rot_table[6][6];
 
        //Just statistic for method solve(). Remove ASAP.
        int max_fold = 0;
@@ -38,98 +49,131 @@ class SnakeCube{
 
     public:
         SnakeCube( void ){
-            for( int i = 0; i < 64; i++ ){
-                direction[ i ][ 0 ] = 1;
-                direction[ i ][ 1 ] = 0;
-                direction[ i ][ 2 ] = 0;
+            for( int i = 0; i < 64; i++ )
+                direction[ i ] = I;
+            make_rotation_table();
+            for( int i = 0; i < 6; i++ ){
+                for( int j = 0; j < 6; j ++ )
+                    printf("%d\t", rot_table[i][j] );
+                printf("\n");
             }
+            printf("\n");
             refresh_absolute_direction();
             refresh_absolute_position();
         }
 
-        int direction_id( int dir[] ){
-            //+i
-            if( dir[0] == 1 && dir[1] == 0 && dir[2] == 0 )
-                return 0;
-            //+j
-            if( dir[0] == 0 && dir[1] == 1 && dir[2] == 0 )
-                return 2;
-            //+k
-            if( dir[0] == 0 && dir[1] == 0 && dir[2] == 1 )
-                return 4;
-            //-i
-            if( dir[0] == -1 && dir[1] == 0 && dir[2] == 0 )
-                return 1;
-            //-j
-            if( dir[0] == 0 && dir[1] == -1 && dir[2] == 0 )
-                return 3;
-            //-k
-            if( dir[0] == 0 && dir[1] == 0 && dir[2] == -1 )
-                return 5;
-            return -1;
-        }
 
-        void refresh_absolute_direction( void ){
-            #pragma omp parallel num_threads(2)
-            double startTime = omp_get_wtime();
-            int current_direction[3] = { 0, 0, 1 };
-            for( int i = 0; i < 64; i++ ){
-                if( get_element_type( i ) == 1 ){
+        void make_rotation_table( void ){
+            for( int v = 0; v < 6; v++ ){
+                int vec[] = {0,0,0};
+                if( v % 2 == 0 )
+                    vec[ v/3 ] = 1;
+                else
+                    vec[ v/3 ] = -1;
+                
+                for( int w = 0; w < 6; w++ ){
                    int rot_matrix[3][3];
-                   #pragma omp for
                    for( int j = 0; j < 3; j++ )
                        for( int k = 0; k < 3; k++ )
                             rot_matrix[j][k] = 0;
-
-                   switch( direction_id( current_direction ) ){
-                       case 0://+i rotation about y axis of pi/2
+                   
+                   switch( w ){
+                       case I://+i rotation about y axis of pi/2
                            rot_matrix[0][2] = 1;
                            rot_matrix[1][1] = 1;
                            rot_matrix[2][0] = -1;
                            break;
-                       case 1://-i rotation about y axis of -pi/2
+                       case _I://-i rotation about y axis of -pi/2
                            rot_matrix[0][2] = -1;
                            rot_matrix[1][1] = 1;
                            rot_matrix[2][0] = 1;
                            break;
-                       case 2://+j rotation about x axis of pi/2
+                       case J://+j rotation about x axis of pi/2
                            rot_matrix[0][0] = 1;
                            rot_matrix[1][2] = -1;
                            rot_matrix[2][1] = 1;
                            break;
-                       case 3://-j
+                       case _J://-j
                            rot_matrix[0][0] = 1;
                            rot_matrix[1][2] = 1;
                            rot_matrix[2][1] = -1;
                            break;
-                       case 4://+k: identity
+                       case K://+k: identity
                            rot_matrix[0][0] = 1;
                            rot_matrix[1][1] = 1;
                            rot_matrix[2][2] = 1;
                            break;
-                       case 5://-k rotation about x axis of pi
+                       case _K://-k rotation about x axis of pi
                            rot_matrix[0][0] = 1;
                            rot_matrix[1][1] = -1;
                            rot_matrix[2][2] = -1;
                            break;
-                   } 
-                   current_direction[ 0 ] = 0;
-                   current_direction[ 1 ] = 0;
-                   current_direction[ 2 ] = 0;
-                   #pragma omp for
+                   }
+
+                   int r[] = {0,0,0};
                    for( int a = 0; a < 3; a++ )
                        for( int b = 0; b < 3; b++ )
-                           current_direction[a] += \
-                                            rot_matrix[a][b] * direction[i][b]; 
+                            r[a] += rot_matrix[a][b] * vec[b];
+                  
+                   for( int a = 0; a < 3; a++ )
+                       printf("%d\t", r[a]);
+                   printf("\n");
+
+                   if( r[ 0 ] == 0 && r[ 2 ] == 0 ){
+                       if( r[ 1 ] == 1 )
+                           rot_table[v][w] = J;
+                       else if( r[1] == -1 )
+                           rot_table[v][w] = _J;
+                   }
+                   if( r[ 1 ] == 0 && r[ 2 ] == 0 ){
+                       if( r[ 0 ] == 1 )
+                           rot_table[v][w] = I;
+                       else if( r[0] == -1 )
+                           rot_table[v][w] = _I;
+                   }
+                   if( r[ 1 ] == 0 && r[ 0 ] == 0 ){
+                       if( r[ 2 ] == 1 )
+                           rot_table[v][w] = K;
+                       else if( r[2] == -1 )
+                           rot_table[v][w] = _K;
+                   }
 
                 }
+            }
+        }
 
-                absolute_direction[i][0] = current_direction[0]; 
-                absolute_direction[i][1] = current_direction[1]; 
-                absolute_direction[i][2] = current_direction[2]; 
+        int direction_id( int dir[] ){
+            int res;
+            //+i
+            if( dir[0] == 1 && dir[1] == 0 && dir[2] == 0 )
+                res = I;
+            //+j
+            if( dir[0] == 0 && dir[1] == 1 && dir[2] == 0 )
+                res = J;
+            //+k
+            if( dir[0] == 0 && dir[1] == 0 && dir[2] == 1 )
+                res = K;
+            //-i
+            if( dir[0] == -1 && dir[1] == 0 && dir[2] == 0 )
+                res = _I;
+            //-j
+            if( dir[0] == 0 && dir[1] == -1 && dir[2] == 0 )
+                res = _J;
+            //-k
+            if( dir[0] == 0 && dir[1] == 0 && dir[2] == -1 )
+                res = _K;
+            return res;
+        }
+
+        void refresh_absolute_direction( void ){
+            double startTime = omp_get_wtime();
+            int current_direction = K;
+            for( int i = 0; i < 64; i++ ){
+                if( get_element_type( i ) == 1 )
+                   current_direction = rot_table[ direction[ i ] ][ current_direction ];
+                absolute_direction[i] = current_direction; 
             }
         elapsed_rd +=  omp_get_wtime() - startTime ;
-
         }
 
         void refresh_absolute_position( void ){
@@ -139,9 +183,15 @@ class SnakeCube{
             absolute_position[0][2] = 0;
             
             for( int i = 1; i < 64; i++ )
-                for( int a = 0; a < 3; a++ )
-                    absolute_position[i][a] = \
-                        absolute_position[i-1][a] + absolute_direction[i-1][a];
+                for( int a = 0; a < 3; a++ ){
+                    absolute_position[i][a] = absolute_position[i-1][a];
+                    if( absolute_direction[ i ] / 3 == a ){
+                        if( absolute_direction[ i ] % 2 == 0 )
+                            absolute_position[i][a]++;
+                        else
+                            absolute_position[i][a]--;
+                    }
+                }
             
             elapsed_rp += omp_get_wtime() - startTime ;
         }
@@ -181,29 +231,9 @@ class SnakeCube{
                 return 1;
             if( get_element_type( el ) == 0 )
                 return 1;
-
-            switch( rot_id ){
-                case 0:
-                    direction[ el ][ 0 ] = 1;
-                    direction[ el ][ 1 ] = 0;
-                    direction[ el ][ 2 ] = 0;
-                    break;
-                case 1:
-                    direction[ el ][ 0 ] = -1;
-                    direction[ el ][ 1 ] = 0;
-                    direction[ el ][ 2 ] = 0;
-                    break;
-                case 2:
-                    direction[ el ][ 0 ] = 0;
-                    direction[ el ][ 1 ] = 1;
-                    direction[ el ][ 2 ] = 0;
-                    break;
-                case 3:
-                    direction[ el ][ 0 ] = 0;
-                    direction[ el ][ 1 ] = -1;
-                    direction[ el ][ 2 ] = 0;
-                    break;
-            }
+            
+            direction[ el ] = rot_id;
+            
             refresh_absolute_direction();
             refresh_absolute_position();
             return 0;
@@ -223,13 +253,14 @@ class SnakeCube{
                 cout << "\n\n";
             }
         }
+
         void print_absolute_direction( void ){
             for( int j = 0; j < 8; j++ ){
                 for( int i = j*8; i < (j+1)*8; i++ )
                     cout << std::setw(2) << i << "\t";
                 cout << "\n";
                 for( int i = j*8; i < (j+1)*8; i++ ){
-                    switch( direction_id( absolute_direction[ i ] ) ){
+                    switch( absolute_direction[ i ] ){
                         case 0:
                             cout << "+i";
                             break;
