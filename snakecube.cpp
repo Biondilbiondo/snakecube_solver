@@ -38,6 +38,7 @@ class SnakeCube{
 
        //Just statistic for method solve(). Remove ASAP.
        int max_fold = 0;
+       int solutions = 0;
        float explored_leafs = 0.0;
 
        //Just for testing performances
@@ -45,7 +46,7 @@ class SnakeCube{
        double elapsed_rd = 0.0;
        double elapsed_gp = 0.0;
        double elapsed_gi = 0.0;
-
+       
 
     public:
         SnakeCube( void ){
@@ -67,9 +68,9 @@ class SnakeCube{
             for( int v = 0; v < 6; v++ ){
                 int vec[] = {0,0,0};
                 if( v % 2 == 0 )
-                    vec[ v/3 ] = 1;
+                    vec[ v/2 ] = 1;
                 else
-                    vec[ v/3 ] = -1;
+                    vec[ v/2 ] = -1;
                 
                 for( int w = 0; w < 6; w++ ){
                    int rot_matrix[3][3];
@@ -116,7 +117,7 @@ class SnakeCube{
                             r[a] += rot_matrix[a][b] * vec[b];
                   
                    for( int a = 0; a < 3; a++ )
-                       printf("%d\t", r[a]);
+                       printf("%d\t", vec[a]);
                    printf("\n");
 
                    if( r[ 0 ] == 0 && r[ 2 ] == 0 ){
@@ -125,18 +126,19 @@ class SnakeCube{
                        else if( r[1] == -1 )
                            rot_table[v][w] = _J;
                    }
-                   if( r[ 1 ] == 0 && r[ 2 ] == 0 ){
+                   else if( r[ 1 ] == 0 && r[ 2 ] == 0 ){
                        if( r[ 0 ] == 1 )
                            rot_table[v][w] = I;
                        else if( r[0] == -1 )
                            rot_table[v][w] = _I;
                    }
-                   if( r[ 1 ] == 0 && r[ 0 ] == 0 ){
+                   else if( r[ 1 ] == 0 && r[ 0 ] == 0 ){
                        if( r[ 2 ] == 1 )
                            rot_table[v][w] = K;
                        else if( r[2] == -1 )
                            rot_table[v][w] = _K;
                    }
+                   else rot_table[v][w] = 7;
 
                 }
             }
@@ -185,7 +187,7 @@ class SnakeCube{
             for( int i = 1; i < 64; i++ )
                 for( int a = 0; a < 3; a++ ){
                     absolute_position[i][a] = absolute_position[i-1][a];
-                    if( absolute_direction[ i ] / 3 == a ){
+                    if( absolute_direction[ i ] / 2 == a ){
                         if( absolute_direction[ i ] % 2 == 0 )
                             absolute_position[i][a]++;
                         else
@@ -341,7 +343,10 @@ class SnakeCube{
                     explored_leafs += pow( 4.0, cnt );
                     return 1;
                 }
-
+                
+                solutions++;
+                cout << "Found a solution!!!\n";
+                return 1;
                 return 0;
             }
 
@@ -356,12 +361,9 @@ class SnakeCube{
                 if( solve( next_el ) == 0 )
                     return 0;
             }
-            if( start == 17 ){
-                cout << "Elapsed in rp: " << elapsed_rp << '\n';
-                cout << "Elapsed in rd: " << elapsed_rd << '\n';
-                cout << "Elapsed in gp: " << elapsed_gp << '\n';
-                cout << "Elapsed in gi: " << elapsed_gi << '\n';
-                exit(0);
+
+            if( start == 0 ){
+                cout << "Total solutions: " << solutions << '\n';
             }
             return 1;
         }
